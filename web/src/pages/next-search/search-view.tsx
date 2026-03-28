@@ -92,7 +92,7 @@ export default function SearchingView({
             setIsSearching?.(false);
           }}
         >
-          RAGFlow
+          元析立方
         </h1>
         <div
           className={cn(

@@ -81,7 +81,7 @@ export default {
       nicknamePlaceholder: 'Please input nickname',
       register: 'Create an account',
       continue: 'Continue',
-      title: 'A leading RAG engine for LLM context',
+      title: '元析立方 MetaCube',
       start: "Let's get started",
       description:
         'Sign up for free to explore top RAG technology. Create knowledge bases and AIs to empower your business.',
@@ -99,7 +99,7 @@ export default {
       fileManager: 'File',
       flow: 'Agent',
       search: 'Search',
-      welcome: 'Welcome to',
+      welcome: '欢迎来到',
       dataset: 'Dataset',
       memories: 'Memory',
     },
@@ -2447,7 +2447,7 @@ Important structured information may include: names, dates, locations, events, k
 
     admin: {
       loginTitle: 'Admin console',
-      title: 'RAGFlow',
+      title: '元析立方',
       confirm: 'Confirm',
       close: 'Close',
       yes: 'Yes',

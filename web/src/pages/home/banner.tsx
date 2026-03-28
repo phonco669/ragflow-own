@@ -1,6 +1,5 @@
 import { Card, CardContent } from '@/components/ui/card';
 import { ArrowRight, X } from 'lucide-react';
-import { useTranslation } from 'react-i18next';
 
 function BannerCard() {
   return (
@@ -40,12 +39,11 @@ export function Banner() {
 }
 
 export function NextBanner() {
-  const { t } = useTranslation();
   return (
     <section className="text-5xl pt-10 pb-14 font-bold px-10">
-      <span className="text-text-primary">{t('header.welcome')}</span>
+      <span className="text-text-primary">欢迎来到</span>
       <span className="pl-3 text-transparent bg-clip-text  bg-gradient-to-l from-[#40EBE3] to-[#4A51FF]">
-        RAGFlow
+        元析立方
       </span>
     </section>
   );
