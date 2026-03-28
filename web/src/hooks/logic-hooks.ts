@@ -278,12 +278,9 @@ export const useSendMessageWithSse = (
                     const prevAnswer = prev.answer || '';
                     const currentAnswer = d.answer || '';
 
-                    let newAnswer: string;
-                    if (prevAnswer && currentAnswer.startsWith(prevAnswer)) {
-                      newAnswer = currentAnswer;
-                    } else {
-                      newAnswer = prevAnswer + currentAnswer;
-                    }
+                    // Fix: Always append current answer to previous answer
+                    // The backend sends incremental chunks, not the full message
+                    const newAnswer = prevAnswer + currentAnswer;
 
                     if (d.start_to_think === true) {
                       newAnswer = newAnswer + '<think>';
