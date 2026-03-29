@@ -36,9 +36,9 @@ else
     echo "  警告: 未找到 MySQL 容器"
 fi
 
-# 备份 Volumes
+# 备份 Volumes - 只备份 ragflow_ 开头的 volumes
 echo "  - 备份 Volumes..."
-for volume in $(docker volume ls --format "{{.Name}}" | grep -E "ragflow|esdata|minio|redis"); do
+for volume in $(docker volume ls --format "{{.Name}}" | grep "^ragflow_"); do
     echo "    备份 $volume..."
     docker run --rm -v $volume:/data -v $BACKUP_DIR:/backup alpine \
         tar czf /backup/${volume}-backup.tar.gz -C /data . 2>/dev/null || echo "    跳过 $volume"
