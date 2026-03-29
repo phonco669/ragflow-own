@@ -49,12 +49,16 @@ class ProcessBase(ComponentBase):
             )
             self.callback(1, "Done")
         except Exception as e:
+            error_msg = str(e)
+            logging.error(f"[DEBUG ProcessBase.invoke] Exception caught: {error_msg}")
+            import traceback
+            logging.error(f"[DEBUG ProcessBase.invoke] Traceback: {traceback.format_exc()}")
             if self.get_exception_default_value():
                 self.set_exception_default_value()
             else:
-                self.set_output("_ERROR", str(e))
+                self.set_output("_ERROR", error_msg)
             logging.exception(e)
-            self.callback(-1, str(e))
+            self.callback(-1, error_msg)
         self.set_output("_elapsed_time", time.perf_counter() - self.output("_created_time"))
         return self.output()
 

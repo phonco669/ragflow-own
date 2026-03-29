@@ -226,6 +226,7 @@ class Parser(ProcessBase):
         self.callback(random.randint(1, 5) / 100.0, "Start to work on a PDF.")
         conf = self._param.setups["pdf"]
         self.set_output("output_format", conf["output_format"])
+        logging.info(f"[DEBUG Parser._pdf] name={name}, conf={conf}")
 
         raw_parse_method = conf.get("parse_method", "")
         parser_model_name = None
@@ -241,7 +242,15 @@ class Parser(ProcessBase):
                 parse_method = "PaddleOCR"
 
         if parse_method.lower() == "deepdoc":
-            bboxes = RAGFlowPdfParser().parse_into_bboxes(blob, callback=self.callback)
+            logging.info(f"[DEBUG Parser._pdf] Using DeepDOC parser, blob size={len(blob) if blob else 0}")
+            try:
+                bboxes = RAGFlowPdfParser().parse_into_bboxes(blob, callback=self.callback)
+                logging.info(f"[DEBUG Parser._pdf] DeepDOC parser succeeded, bboxes count={len(bboxes) if bboxes else 0}")
+            except Exception as e:
+                logging.error(f"[DEBUG Parser._pdf] DeepDOC parser failed: {e}")
+                import traceback
+                logging.error(f"[DEBUG Parser._pdf] Traceback: {traceback.format_exc()}")
+                raise
         elif parse_method.lower() == "plain_text":
             lines, _ = PlainParser()(blob)
             bboxes = [{"text": t} for t, _ in lines]
@@ -838,29 +847,50 @@ class Parser(ProcessBase):
             "email": self._email,
         }
 
+        logging.info(f"[DEBUG Parser._invoke] kwargs={kwargs}")
+        logging.info(f"[DEBUG Parser._invoke] self._param.setups={self._param.setups}")
+
         try:
             from_upstream = ParserFromUpstream.model_validate(kwargs)
         except Exception as e:
+            logging.error(f"[DEBUG Parser._invoke] Input validation error: {e}")
             self.set_output("_ERROR", f"Input error: {str(e)}")
             return
 
         name = from_upstream.name
+        logging.info(f"[DEBUG Parser._invoke] Processing file: {name}")
+        
         if self._canvas._doc_id:
             b, n = File2DocumentService.get_storage_address(doc_id=self._canvas._doc_id)
             blob = settings.STORAGE_IMPL.get(b, n)
+            logging.info(f"[DEBUG Parser._invoke] Getting blob from storage: doc_id={self._canvas._doc_id}")
         else:
+            logging.info(f"[DEBUG Parser._invoke] Getting blob from file service: created_by={from_upstream.file['created_by']}, file_id={from_upstream.file['id']}")
             blob = FileService.get_blob(from_upstream.file["created_by"], from_upstream.file["id"])
 
         done = False
         for p_type, conf in self._param.setups.items():
-            if from_upstream.name.split(".")[-1].lower() not in conf.get("suffix", []):
+            file_ext = from_upstream.name.split(".")[-1].lower()
+            suffix_list = conf.get("suffix", [])
+            logging.info(f"[DEBUG Parser._invoke] Checking p_type={p_type}, file_ext={file_ext}, suffix={suffix_list}")
+            if file_ext not in suffix_list:
                 continue
-            await thread_pool_exec(function_map[p_type], name, blob)
+            logging.info(f"[DEBUG Parser._invoke] Matched! Executing {p_type}")
+            try:
+                await thread_pool_exec(function_map[p_type], name, blob)
+                logging.info(f"[DEBUG Parser._invoke] {p_type} executed successfully")
+            except Exception as e:
+                logging.error(f"[DEBUG Parser._invoke] {p_type} execution failed: {e}")
+                import traceback
+                logging.error(f"[DEBUG Parser._invoke] Traceback: {traceback.format_exc()}")
+                raise
             done = True
             break
 
         if not done:
-            raise Exception("No suitable for file extension: `.%s`" % from_upstream.name.split(".")[-1].lower())
+            error_msg = "No suitable for file extension: `.%s`" % from_upstream.name.split(".")[-1].lower()
+            logging.error(f"[DEBUG Parser._invoke] {error_msg}")
+            raise Exception(error_msg)
 
         outs = self.output()
         tasks = []

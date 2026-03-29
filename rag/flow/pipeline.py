@@ -156,8 +156,11 @@ class Pipeline(Graph):
             tasks.append(asyncio.create_task(invoke()))
             await asyncio.gather(*tasks)
 
-            if cpn_obj.error():
-                self.error = "[ERROR]" + cpn_obj.error()
+            error_output = cpn_obj.error()
+            logging.info(f"[DEBUG Pipeline.run] Component {cpn_obj.component_name} error output: {error_output}")
+            if error_output:
+                self.error = "[ERROR]" + str(error_output)
+                logging.error(f"[DEBUG Pipeline.run] Component error: {self.error}")
                 self.callback(cpn_obj._id, -1, self.error)
                 break
             idx += 1
