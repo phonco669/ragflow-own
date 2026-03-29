@@ -27,7 +27,8 @@ if [ -n "$MYSQL_CONTAINER" ]; then
     fi
     
     if [ -n "$MYSQL_PASS" ]; then
-        docker exec $MYSQL_CONTAINER mysqldump -u root -p$MYSQL_PASS ragflow > $BACKUP_DIR/mysql-backup.sql 2>/dev/null && echo "  MySQL 备份完成" || echo "  警告: MySQL 备份失败"
+        # 密码用单引号包裹，防止特殊字符问题
+        docker exec $MYSQL_CONTAINER mysqldump -u root -p'$MYSQL_PASS' ragflow > $BACKUP_DIR/mysql-backup.sql 2>/dev/null && echo "  MySQL 备份完成" || echo "  警告: MySQL 备份失败"
     else
         # 尝试无密码备份（如果 MySQL 允许）
         docker exec $MYSQL_CONTAINER mysqldump -u root ragflow > $BACKUP_DIR/mysql-backup.sql 2>/dev/null && echo "  MySQL 备份完成" || echo "  警告: MySQL 备份失败，请手动备份"
@@ -51,10 +52,15 @@ ls -lh $BACKUP_DIR
 echo ""
 echo "步骤 2: 停止服务"
 cd $RAGFLOW_DIR/docker
-docker compose down
+# 兼容 docker compose 和 docker-compose
+docker compose down 2>/dev/null || docker-compose down
 
 echo ""
 echo "步骤 3: 备份旧代码"
+# 如果旧备份已存在，先删除
+if [ -d "/opt/soft/ragflow-old-v0.24.0" ]; then
+    rm -rf /opt/soft/ragflow-old-v0.24.0
+fi
 mv $RAGFLOW_DIR /opt/soft/ragflow-old-v0.24.0
 
 echo ""
@@ -104,8 +110,11 @@ echo "Logo 修改完成"
 
 echo ""
 echo "步骤 6: 编译前端"
-npm install
-npm run build
+echo "  - 安装依赖（可能需要几分钟）..."
+npm install || { echo "  错误: npm install 失败"; exit 1; }
+
+echo "  - 编译..."
+npm run build || { echo "  错误: npm build 失败"; exit 1; }
 
 # 复制到 docker 目录
 mkdir -p ../docker/nginx
@@ -114,7 +123,8 @@ cp -r dist/* ../docker/nginx/
 echo ""
 echo "步骤 7: 启动服务"
 cd ../docker
-docker compose up -d
+# 兼容 docker compose 和 docker-compose
+docker compose up -d 2>/dev/null || docker-compose up -d
 
 echo ""
 echo "=========================================="
