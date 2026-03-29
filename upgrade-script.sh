@@ -10,7 +10,7 @@ echo "=========================================="
 
 # 配置
 BACKUP_DIR=~/ragflow-backup-$(date +%Y%m%d-%H%M%S)
-RAGFLOW_DIR=~/ragflow  # 请根据实际情况修改
+RAGFLOW_DIR=/opt/soft/ragflow  # 部署路径
 
 echo ""
 echo "步骤 1: 备份数据到 $BACKUP_DIR"
@@ -20,10 +20,18 @@ mkdir -p $BACKUP_DIR
 echo "  - 备份 MySQL..."
 MYSQL_CONTAINER=$(docker ps --format "{{.Names}}" | grep -i mysql | head -1)
 if [ -n "$MYSQL_CONTAINER" ]; then
-    read -s -p "请输入 MySQL root 密码: " MYSQL_PASS
-    echo ""
-    docker exec $MYSQL_CONTAINER mysqldump -u root -p$MYSQL_PASS ragflow > $BACKUP_DIR/mysql-backup.sql
-    echo "  MySQL 备份完成"
+    # 尝试从 .env 文件读取密码
+    MYSQL_PASS=""
+    if [ -f "$RAGFLOW_DIR/docker/.env" ]; then
+        MYSQL_PASS=$(grep -E "^MYSQL_PASSWORD=" $RAGFLOW_DIR/docker/.env | cut -d= -f2)
+    fi
+    
+    if [ -n "$MYSQL_PASS" ]; then
+        docker exec $MYSQL_CONTAINER mysqldump -u root -p$MYSQL_PASS ragflow > $BACKUP_DIR/mysql-backup.sql 2>/dev/null && echo "  MySQL 备份完成" || echo "  警告: MySQL 备份失败"
+    else
+        # 尝试无密码备份（如果 MySQL 允许）
+        docker exec $MYSQL_CONTAINER mysqldump -u root ragflow > $BACKUP_DIR/mysql-backup.sql 2>/dev/null && echo "  MySQL 备份完成" || echo "  警告: MySQL 备份失败，请手动备份"
+    fi
 else
     echo "  警告: 未找到 MySQL 容器"
 fi
@@ -47,7 +55,7 @@ docker compose down
 
 echo ""
 echo "步骤 3: 备份旧代码"
-mv $RAGFLOW_DIR ~/ragflow-old-v0.24.0
+mv $RAGFLOW_DIR /opt/soft/ragflow-old-v0.24.0
 
 echo ""
 echo "步骤 4: 拉取新版本"
@@ -86,9 +94,9 @@ sed -i "s/RAGFlow/元析立方/g" src/pages/login-next/index.tsx
 sed -i "s/RAGFlow/元析立方/g" src/pages/next-search/search-view.tsx
 
 # 复制 Logo（从备份的旧代码中复制）
-if [ -f ~/ragflow-old-v0.24.0/web/public/logo.svg ]; then
-    cp ~/ragflow-old-v0.24.0/web/public/logo.svg public/logo.svg
-    cp ~/ragflow-old-v0.24.0/web/src/assets/logo-with-text.svg src/assets/logo-with-text.svg
+if [ -f /opt/soft/ragflow-old-v0.24.0/web/public/logo.svg ]; then
+    cp /opt/soft/ragflow-old-v0.24.0/web/public/logo.svg public/logo.svg
+    cp /opt/soft/ragflow-old-v0.24.0/web/src/assets/logo-with-text.svg src/assets/logo-with-text.svg
     echo "Logo 文件已复制"
 fi
 
